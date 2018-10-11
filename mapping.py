@@ -12,9 +12,9 @@ def build_lookup_table():
     return lookup
 
 
-def get_team(player, lookup_dict):
+def get_team(player, lookup_dict, args):
     p = lookup_dict.get(player)
-    if not p:
+    if not p and args.v:
         print('No team found for player {}'.format(p))
 
     return p
