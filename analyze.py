@@ -41,7 +41,6 @@ entries_to_analyze = []
 
 if args.use_cache:
     entries_to_analyze = pickle.load(open('entries.p', 'rb'))
-    print(len(entries_to_analyze))
 else:
     with open(args.csv, 'r') as f:
         lookup_table = build_lookup_table()

@@ -1,12 +1,15 @@
+import os
 import csv
+
+_DIR = os.path.dirname(os.path.abspath(__file__))
+_LOOKUP_TABLE_LOCATION = '{}/data/LOOKUP.csv'.format(_DIR)
 
 
 def build_lookup_table():
     lookup = {}
-    with open('./LOOKUP.csv', 'r') as f:
+    with open(_LOOKUP_TABLE_LOCATION, 'r') as f:
         reader = csv.DictReader(f)
         for line in reader:
-            # TODO - BUILD LOOKUP DICT
             lookup[line['Name']] = line['TeamAbbrev']
 
     return lookup
