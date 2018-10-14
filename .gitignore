@@ -3,3 +3,4 @@ __pycache__
 exp.py
 *.csv
 *.p
+.DS_Store

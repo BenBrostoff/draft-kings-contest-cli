@@ -10,14 +10,29 @@ def build_lookup_table():
     with open(_LOOKUP_TABLE_LOCATION, 'r') as f:
         reader = csv.DictReader(f)
         for line in reader:
-            lookup[line['Name']] = line['TeamAbbrev']
+            lookup[line['Name']] = {
+                'team': line['TeamAbbrev'],
+                'pos': line['Position'],
+            }
 
     return lookup
 
 
 def get_team(player, lookup_dict, args):
-    p = lookup_dict.get(player)
-    if not p and args.v:
-        print('No team found for player {}'.format(p))
+    datum = lookup_dict.get(player)
+    if not datum:
+        if args.v:
+            print('No team found for player {}'.format(player))
+        return None
 
-    return p
+    return datum['team']
+
+
+def get_pos(player, lookup_dict, args):
+    datum = lookup_dict.get(player)
+    if not datum:
+        if args.v:
+            print('No position found for player {}'.format(player))
+        return None
+
+    return datum['pos']

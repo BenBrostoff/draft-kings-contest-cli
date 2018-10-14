@@ -6,7 +6,7 @@ from collections import Counter
 import crayons
 from terminaltables import AsciiTable
 import argparse
-from mapping import build_lookup_table, get_team
+from mapping import build_lookup_table, get_team, get_pos
 from util import time_conversion
 
 start = datetime.now()
@@ -42,6 +42,7 @@ entries_to_analyze = []
 if args.use_cache:
     entries_to_analyze = pickle.load(open('entries.p', 'rb'))
 else:
+    print(args.csv)
     with open(args.csv, 'r') as f:
         lookup_table = build_lookup_table()
         reader = csv.DictReader(f)
@@ -74,6 +75,13 @@ else:
                 if p
             ]
 
+            flex = players[-3]
+            flex_pos = get_pos(
+                flex,
+                lookup_table,
+                args,
+            )
+
             for p in players:
                 team = get_team(p, lookup_table, args)
                 if team:
@@ -96,7 +104,8 @@ else:
             if not args.player or player == args.player:
                 entries_to_analyze.append([
                     player,
-                    numerator,
+                    flex_pos,
+                    flex,
                     total_entries,
                     points,
                     fours,
@@ -110,7 +119,8 @@ else:
 
 HEADERS = [[
     'Player',
-    'Numerator',
+    'Flex',
+    'Flex Player',
     'Total Entries',
     'Points',
     '4s',
