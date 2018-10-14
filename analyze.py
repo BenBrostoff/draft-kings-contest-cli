@@ -7,7 +7,7 @@ import crayons
 from terminaltables import AsciiTable
 import argparse
 from mapping import build_lookup_table, get_team, get_pos
-from util import time_conversion
+from util import time_conversion, convert_lineup
 
 start = datetime.now()
 
@@ -69,23 +69,17 @@ else:
 
             entry_names.append(player)
             lineup = line['Lineup']
-            players = [
-                p for p in
-                re.split(SPLIT, lineup)
-                if p
-            ]
-
-            flex = players[-3]
-            flex_pos = get_pos(
-                flex,
-                lookup_table,
-                args,
-            )
+            players = convert_lineup(lineup)
 
             for p in players:
-                team = get_team(p, lookup_table, args)
+                team = get_team(p.name, lookup_table, args)
                 if team:
                     entry_teams.append(team)
+
+            flex = [
+                p for p in players
+                if p.position == 'FLEX'
+            ][0]
 
             freq = Counter(entry_teams)
 
@@ -104,8 +98,8 @@ else:
             if not args.player or player == args.player:
                 entries_to_analyze.append([
                     player,
-                    flex_pos,
-                    flex,
+                    flex.position,
+                    flex.name,
                     total_entries,
                     points,
                     fours,
