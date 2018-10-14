@@ -1,5 +1,6 @@
 import os
 import csv
+from argparse import Namespace
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 _LOOKUP_TABLE_LOCATION = '{}/data/LOOKUP.csv'.format(_DIR)
@@ -28,7 +29,7 @@ def get_team(player, lookup_dict, args):
     return datum['team']
 
 
-def get_pos(player, lookup_dict, args):
+def get_pos(player: str, lookup_dict: dict, args: Namespace):
     datum = lookup_dict.get(player)
     if not datum:
         if args.v:

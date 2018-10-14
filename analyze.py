@@ -98,7 +98,11 @@ else:
             if not args.player or player == args.player:
                 entries_to_analyze.append([
                     player,
-                    flex.position,
+                    get_pos(
+                        flex.name.strip(),
+                        lookup_table,
+                        args
+                    ),
                     flex.name,
                     total_entries,
                     points,
