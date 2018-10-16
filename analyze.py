@@ -1,4 +1,3 @@
-import re
 import csv
 import pickle
 from datetime import datetime
@@ -17,85 +16,72 @@ parser.add_argument('-player', type=str, default='')
 parser.add_argument('-v', type=str, default='')
 parser.add_argument('-csv', type=str, default='week.csv')
 parser.add_argument('-use_cache', type=str, default='')
+parser.add_argument('-show', type=int, default=25)
 
-args = parser.parse_args()
-
-# TODO - figure out way to build regex that doesn't
-# get blank first string
-
-# TODO - Control the print output
-# Command line flag to limit number of players shown
-
-# TODO - separate data gather and filtering options
-
-SPLIT = 'QB | RB | QB | WR | FLEX | DST | TE'
-
+# TODO - be able to tie to salaries
+# LT TODO - be able to play these exact lineups
 # TODO - figure out what numerator means
 
+def get_csv_data(args: argparse.Namespace) -> list:
+    entry_names = []
+    entries_to_analyze = []
 
-lineups_analyzed = 0
+    if args.use_cache:
+        entries_to_analyze = pickle.load(open('entries.p', 'rb'))
+    else:
+        print(args.csv)
+        with open(args.csv, 'r') as f:
+            lookup_table = build_lookup_table()
+            reader = csv.DictReader(f)
+            for line in reader:
+                entry_teams = []
 
-entry_names = []
-player_to_analyze = args.player
-entries_to_analyze = []
+                points = float(line['Points'])
+                entry_components = line['EntryName'].split(' ')
+                player = entry_components[0]
 
-if args.use_cache:
-    entries_to_analyze = pickle.load(open('entries.p', 'rb'))
-else:
-    print(args.csv)
-    with open(args.csv, 'r') as f:
-        lookup_table = build_lookup_table()
-        reader = csv.DictReader(f)
-        for line in reader:
-            entry_teams = []
+                if len(entry_components) < 2:
+                    numerator = 0
+                    total_entries = 0
+                else:
+                    number_components = entry_components[1].split('/')
+                    numerator = number_components[0].replace('(', '')
+                    total_entries = \
+                        int(
+                            number_components[1].replace(')', '')
+                        )
 
-            points = float(line['Points'])
-            entry_components = line['EntryName'].split(' ')
-            player = entry_components[0]
+                if points < float(args.ms):
+                    break
 
-            if len(entry_components) < 2:
-                numerator = 0
-                total_entries = 0
-            else:
-                number_components = entry_components[1].split('/')
-                numerator = number_components[0].replace('(', '')
-                total_entries = \
-                    int(
-                        number_components[1].replace(')', '')
-                    )
+                entry_names.append(player)
+                lineup = line['Lineup']
+                players = convert_lineup(lineup)
 
-            if points < float(args.ms):
-                break
+                for p in players:
+                    team = get_team(p.name.strip(), lookup_table, args)
+                    if team:
+                        entry_teams.append(team)
 
-            entry_names.append(player)
-            lineup = line['Lineup']
-            players = convert_lineup(lineup)
+                flex = [
+                    p for p in players
+                    if p.position == 'FLEX'
+                ][0]
 
-            for p in players:
-                team = get_team(p.name, lookup_table, args)
-                if team:
-                    entry_teams.append(team)
+                freq = Counter(entry_teams)
 
-            flex = [
-                p for p in players
-                if p.position == 'FLEX'
-            ][0]
+                fours = ''
+                threes = ''
+                twos = ''
+                for team, count in freq.items():
+                    if count == 4:
+                        fours += '{}, '.format(team)
+                    elif count == 3:
+                        threes += '{}, '.format(team)
+                    elif count == 2:
+                        twos += '{}, '.format(team)
 
-            freq = Counter(entry_teams)
-
-            fours = ''
-            threes = ''
-            twos = ''
-            for team, count in freq.items():
-                if count == 4:
-                    fours += '{}, '.format(team)
-                elif count == 3:
-                    threes += '{}, '.format(team)
-                elif count == 2:
-                    twos += '{}, '.format(team)
-
-            # TODO - this shouldn't be in data building stage
-            if not args.player or player == args.player:
+                # TODO - pass dict instead of list
                 entries_to_analyze.append([
                     player,
                     get_pos(
@@ -111,30 +97,50 @@ else:
                     twos
                 ])
 
-            lineups_analyzed += 1
+        pickle.dump(entries_to_analyze, open('entries.p', 'wb'))
 
-    pickle.dump(entries_to_analyze, open('entries.p', 'wb'))
+    return entries_to_analyze
 
-HEADERS = [[
-    'Player',
-    'Flex',
-    'Flex Player',
-    'Total Entries',
-    'Points',
-    '4s',
-    '3s',
-    '2s'
-]]
-final = HEADERS + entries_to_analyze
-table = AsciiTable(HEADERS + entries_to_analyze)
 
-print(table.table)
-print(crayons.green('Analyzed {} lineups'.format(len(entries_to_analyze))))
+def filter_data(all_entries: list, args: argparse.Namespace) -> list:
+    filtered_entries = []
+    for entry in all_entries:
+        player = entry[0]
+        if not args.player or player == args.player:
+            filtered_entries.append(entry)
 
-end = datetime.now()
+    return filtered_entries
 
-print(
-    crayons.yellow('Script took {} seconds'.format(
-        time_conversion(end - start))
+
+if __name__ == '__main__':
+    args = parser.parse_args()
+    HEADERS = [[
+        'Player',
+        'Flex',
+        'Flex Player',
+        'Total Entries',
+        'Points',
+        '4s',
+        '3s',
+        '2s'
+    ]]
+
+    all_entries = get_csv_data(args)
+    entries_to_analyze = filter_data(
+        all_entries,
+        args
     )
-)
+
+    table_data = HEADERS + entries_to_analyze[:args.show]
+    table = AsciiTable(table_data)
+
+    print(table.table)
+    print(crayons.green('Analyzed {} lineups'.format(len(entries_to_analyze))))
+
+    end = datetime.now()
+
+    print(
+        crayons.yellow('Script took {} seconds'.format(
+            time_conversion(end - start))
+        )
+    )
