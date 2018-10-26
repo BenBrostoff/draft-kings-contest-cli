@@ -11,12 +11,13 @@ from util import time_conversion, convert_lineup
 start = datetime.now()
 
 parser = argparse.ArgumentParser(description='Process DraftKings contest results.')
-parser.add_argument('-ms', type=int, default=150)
+parser.add_argument('-ms', type=int, default=0)
 parser.add_argument('-player', type=str, default='')
 parser.add_argument('-v', type=str, default='')
 parser.add_argument('-csv', type=str, default='week.csv')
 parser.add_argument('-use_cache', type=str, default='')
 parser.add_argument('-show', type=int, default=25)
+parser.add_argument('-exposure_view', type=bool, default=False)
 
 # TODO - be able to tie to salaries
 # LT TODO - be able to play these exact lineups
@@ -67,6 +68,10 @@ def get_csv_data(args: argparse.Namespace) -> list:
                     p for p in players
                     if p.position == 'FLEX'
                 ][0]
+                qb = [
+                    p for p in players
+                    if p.position == 'QB'
+                ][0]
 
                 freq = Counter(entry_teams)
 
@@ -90,6 +95,7 @@ def get_csv_data(args: argparse.Namespace) -> list:
                         args
                     ),
                     flex.name,
+                    qb.name,
                     total_entries,
                     points,
                     fours,
@@ -114,27 +120,47 @@ def filter_data(all_entries: list, args: argparse.Namespace) -> list:
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    HEADERS = [[
-        'Player',
-        'Flex',
-        'Flex Player',
-        'Total Entries',
-        'Points',
-        '4s',
-        '3s',
-        '2s'
-    ]]
-
     all_entries = get_csv_data(args)
     entries_to_analyze = filter_data(
         all_entries,
         args
     )
 
-    table_data = HEADERS + entries_to_analyze[:args.show]
-    table = AsciiTable(table_data)
+    if args.exposure_view:
+        qbs = [
+            lst[3] for lst in entries_to_analyze
+        ]
+        total_qbs = len(qbs)
+        qb_count = Counter(qbs)
 
-    print(table.table)
+        qb_exp = []
+        for qb, num in qb_count.items():
+            qb_exp.append(
+                [qb, round(num / total_qbs, 2)]
+            )
+
+        HEADERS = [['QB Name', 'Exposure']]
+        table_data = HEADERS + sorted(qb_exp, key=lambda x: x[1], reverse=True)
+        table = AsciiTable(table_data)
+        print(table.table)
+    else:
+        HEADERS = [[
+            'Player',
+            'Flex',
+            'Flex Player',
+            'QB Player',
+            'Total Entries',
+            'Points',
+            '4s',
+            '3s',
+            '2s'
+        ]]
+
+        table_data = HEADERS + entries_to_analyze[:args.show]
+        table = AsciiTable(table_data)
+
+        print(table.table)
+
     print(crayons.green('Analyzed {} lineups'.format(len(entries_to_analyze))))
 
     end = datetime.now()
